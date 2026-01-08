@@ -5,8 +5,7 @@ from langgraph.graph.message import add_messages
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
-from .tools import check_order_status
-from .utils import get_llm
+from .utils import get_llm, load_tools_for_agent
 
 # --- State Definition ---
 class AgentState(TypedDict):
@@ -24,7 +23,6 @@ def decision_node(state: AgentState, config: RunnableConfig):
     try:
         model = get_llm("decision_agent")
     except Exception as e:
-        # Fallback if config is missing (for safety during development)
         return {"next_step": "support_agent", "messages": [AIMessage(content=f"Error loading decision agent: {e}")]}
 
     # System instruction for routing
@@ -42,32 +40,59 @@ def decision_node(state: AgentState, config: RunnableConfig):
 
 def data_agent_node(state: AgentState, config: RunnableConfig):
     """
-    Handles data retrieval tasks. Uses 'data_agent' configuration.
+    Handles data retrieval tasks. Uses 'data_agent' configuration and dynamic tools.
     """
     messages = state["messages"]
     try:
         model = get_llm("data_agent")
-        # Bind tools
-        model_with_tools = model.bind_tools([check_order_status])
+        tools = load_tools_for_agent("data_agent")
+        
+        if tools:
+            model_with_tools = model.bind_tools(tools)
+        else:
+            model_with_tools = model # No tools available
+            
     except Exception as e:
          return {"messages": [AIMessage(content=f"Error loading data agent: {e}")], "next_step": "end"}
 
     response = model_with_tools.invoke(messages)
 
-    # If the LLM decided to call a tool
+    # Simple tool execution loop (for 1 tool call depth)
+    # In a real graph, we might want a prebuilt 'prebuilt_tool_node' or a loop.
+    # Here we handle the tool call manually as before.
     if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        if tool_call["name"] == "check_order_status":
-            # Execute the tool
-            result = check_order_status.invoke(tool_call["args"])
+        # We need a map of name -> func to invoke
+        tool_map = {t.name: t for t in tools}
+        
+        executed_messages = [response]
+        
+        for tool_call in response.tool_calls:
+            tool_name = tool_call["name"]
+            if tool_name in tool_map:
+                tool_func = tool_map[tool_name]
+                # Invoke the tool
+                # Note: tool_func is a LangChain Tool object, invoke it directly
+                try:
+                    result = tool_func.invoke(tool_call["args"])
+                except Exception as tool_err:
+                    result = f"Error executing {tool_name}: {tool_err}"
 
-            tool_msg = ToolMessage(
-                content=str(result),
-                tool_call_id=tool_call["id"],
-                name=tool_call["name"]
-            )
-            # Return the AI message (tool call) AND the Tool message (result)
-            return {"messages": [response, tool_msg], "next_step": "end"}
+                tool_msg = ToolMessage(
+                    content=str(result),
+                    tool_call_id=tool_call["id"],
+                    name=tool_name
+                )
+                executed_messages.append(tool_msg)
+            else:
+                executed_messages.append(
+                    ToolMessage(
+                         content=f"Tool {tool_name} not found or not allowed.",
+                         tool_call_id=tool_call["id"],
+                         name=tool_name
+                    )
+                )
+
+        return {"messages": executed_messages, "next_step": "end"}
 
     return {"messages": [response], "next_step": "end"}
 
@@ -80,7 +105,6 @@ def support_agent_node(state: AgentState, config: RunnableConfig):
     try:
          model = get_llm("support_agent")
     except Exception as e:
-         # Fallback to a simple message if config fails
          return {"messages": [AIMessage(content="I am the Support Agent. I can help with general questions.")], "next_step": "end"}
 
     response = model.invoke(messages)
