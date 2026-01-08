@@ -1,0 +1,15 @@
+django>=4.2
+celery
+redis
+langchain
+langgraph
+langchain-community
+langchain-core
+langchain-text-splitters
+langchain-openai
+chromadb
+pydantic
+pytest
+pytest-django
+pytest-mock
+freezegun
