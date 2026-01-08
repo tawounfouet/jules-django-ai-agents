@@ -131,3 +131,5 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Default, but we are using task
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
