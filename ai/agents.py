@@ -5,75 +5,34 @@ from langgraph.graph.message import add_messages
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
-from .tools import check_order_status, get_ticket_info, create_support_response
+from .tools import check_order_status
+from .utils import get_llm
 
 # --- State Definition ---
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     next_step: str
 
-# --- Mocks for LLM (since we don't have an API key) ---
-
-class MockLLM:
-    """A simple mock LLM that acts based on input text keywords."""
-
-    def __init__(self, role="router"):
-        self.role = role
-
-    def invoke(self, messages):
-        # We need to look at the *conversation history* to find the user's intent or the order ID.
-        # But for 'data' agent, the immediate previous message might be "Routing to Data Agent..." (AIMessage).
-        # We should find the last HumanMessage to get the actual request.
-
-        last_human_message = None
-        for msg in reversed(messages):
-            if isinstance(msg, HumanMessage):
-                last_human_message = msg
-                break
-
-        content = last_human_message.content.lower() if last_human_message else ""
-
-        if self.role == "decision":
-            # Routing logic based on keywords
-            if "order" in content or "status" in content:
-                return AIMessage(content="ROUTING_TO_DATA")
-            else:
-                return AIMessage(content="ROUTING_TO_SUPPORT")
-
-        elif self.role == "data":
-            # Extract ID simply for the mock
-            import re
-            match = re.search(r'\d+', content)
-            order_id = match.group(0) if match else "1"
-
-            # Simulate tool call
-            return AIMessage(
-                content="",
-                tool_calls=[{
-                    "name": "check_order_status",
-                    "args": {"order_id": int(order_id)},
-                    "id": "call_123"
-                }]
-            )
-
-        elif self.role == "support":
-             return AIMessage(content="Hello, how can I help you today?")
-
-        return AIMessage(content="I don't know what to do.")
-
-
 # --- Node Definitions ---
 
 def decision_node(state: AgentState, config: RunnableConfig):
     """
     Decides whether to route to DataAgent or SupportAgent.
-    In a real app, this would use an LLM to classify intent.
+    Uses 'decision_agent' configuration.
     """
     messages = state["messages"]
-    # For POC: simple keyword match or use the MockLLM
-    # We'll use the MockLLM to simulate an agent thinking
-    llm = MockLLM(role="decision")
-    response = llm.invoke(messages)
+    try:
+        model = get_llm("decision_agent")
+    except Exception as e:
+        # Fallback if config is missing (for safety during development)
+        return {"next_step": "support_agent", "messages": [AIMessage(content=f"Error loading decision agent: {e}")]}
+
+    # System instruction for routing
+    system_message = SystemMessage(content="""You are a routing agent. 
+    If the user asks about order status, tracking, or ticket details, respond with 'ROUTING_TO_DATA'.
+    Otherwise, respond with 'ROUTING_TO_SUPPORT'.""")
+    
+    response = model.invoke([system_message] + messages)
 
     if "ROUTING_TO_DATA" in response.content:
         return {"next_step": "data_agent", "messages": [AIMessage(content="Routing to Data Agent...")]}
@@ -83,13 +42,19 @@ def decision_node(state: AgentState, config: RunnableConfig):
 
 def data_agent_node(state: AgentState, config: RunnableConfig):
     """
-    Handles data retrieval tasks.
+    Handles data retrieval tasks. Uses 'data_agent' configuration.
     """
     messages = state["messages"]
-    llm = MockLLM(role="data")
-    response = llm.invoke(messages)
+    try:
+        model = get_llm("data_agent")
+        # Bind tools
+        model_with_tools = model.bind_tools([check_order_status])
+    except Exception as e:
+         return {"messages": [AIMessage(content=f"Error loading data agent: {e}")], "next_step": "end"}
 
-    # If the LLM decided to call a tool (simulated)
+    response = model_with_tools.invoke(messages)
+
+    # If the LLM decided to call a tool
     if response.tool_calls:
         tool_call = response.tool_calls[0]
         if tool_call["name"] == "check_order_status":
@@ -109,7 +74,14 @@ def data_agent_node(state: AgentState, config: RunnableConfig):
 
 def support_agent_node(state: AgentState, config: RunnableConfig):
     """
-    Handles general support queries.
+    Handles general support queries. Uses 'support_agent' configuration.
     """
-    # Simply respond with a canned message or use a tool
-    return {"messages": [AIMessage(content="This is the Support Agent. I see you have a query not related to order data. How can I assist regarding our policies?")], "next_step": "end"}
+    messages = state["messages"]
+    try:
+         model = get_llm("support_agent")
+    except Exception as e:
+         # Fallback to a simple message if config fails
+         return {"messages": [AIMessage(content="I am the Support Agent. I can help with general questions.")], "next_step": "end"}
+
+    response = model.invoke(messages)
+    return {"messages": [response], "next_step": "end"}
