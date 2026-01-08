@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Jules AI Agents{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Orchestrate <span class="text-gradient">Intelligent Agents</span></h1>
+    <p>Build, manage, and deploy specialized AI agents with Django and LangGraph.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="/admin/" class="btn btn-primary">Go to Admin</a>
+    </div>
+</section>
+
+<section class="grid grid-3">
+    <div class="card">
+        <h3>🤖 Autonomous Agents</h3>
+        <p>Create specialized agents that can reason and act independently to solve complex tasks.</p>
+    </div>
+    <div class="card">
+        <h3>🔗 LangGraph Integration</h3>
+        <p>Seamlessly integrate with LangGraph for stateful multi-agent workflows.</p>
+    </div>
+    <div class="card">
+        <h3>🛡️ Enterprise Ready</h3>
+        <p>Built on Django with security, scalability, and user management baked in.</p>
+    </div>
+</section>
+{% endblock %}
