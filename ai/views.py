@@ -1,9 +1,16 @@
+from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from langchain_core.messages import HumanMessage
 from .graph import build_graph
 import json
 import uuid
+
+def chat_ui(request):
+    """
+    Renders the Chat UI template.
+    """
+    return render(request, 'ai/chat.html')
 
 @csrf_exempt
 def trigger_agent(request):
