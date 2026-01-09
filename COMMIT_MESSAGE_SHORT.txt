@@ -1,0 +1,21 @@
+feat: Add TMDB integration, dotenv config, and improve agent architecture
+
+Major improvements to the Django AI multi-agent system:
+
+- Add python-dotenv for centralized configuration management
+- Integrate TMDB movie discovery with 2 new tools and Movie Agent
+- Rename "Decision Agent" to "Supervisor" for clarity
+- Migrate message roles to LangChain terminology (user→human, assistant→ai)
+- Improve agent tracking from 7% to 97% message association
+- Rename "Support Agent" to "Customer Support Agent"
+- Add comprehensive documentation for all changes
+
+Breaking Changes:
+- Message roles: "user"→"human", "assistant"→"ai" (migration included)
+- Agent key: "decision_agent"→"supervisor" (requires re-seed)
+
+Metrics:
+- Agents: 3→5, Tools: 9→13, Message tracking: 7%→97%
+- Config: Hardcoded→Centralized, Terminology: 50%→100% LangChain aligned
+
+See SESSION_FINAL_COMPLETE.md for full documentation.

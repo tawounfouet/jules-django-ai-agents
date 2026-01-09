@@ -10,22 +10,29 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-h^sj&()w!!wu3h685t3uexsyj#e%rt1wdd(e_%&%7rm4c4ug$t"
+SECRET_KEY = os.getenv(
+    "SECRET_KEY", "django-insecure-h^sj&()w!!wu3h685t3uexsyj#e%rt1wdd(e_%&%7rm4c4ug$t"
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 
 # Application definition
@@ -42,6 +49,7 @@ INSTALLED_APPS = [
     "users",
     "ai",
     "business",
+    "documents",
     # Third party
     "celery",
 ]
@@ -61,7 +69,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates'],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -122,15 +130,26 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # User model
 AUTH_USER_MODEL = "users.User"
 
+# TMDB (The Movie Database) Configuration
+# Get your API key from: https://www.themoviedb.org/settings/api
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
+
+# AI Provider API Keys
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+LOCAL_LLM_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:11434")
+
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Default, but we are using task_always_eager
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_TASK_ALWAYS_EAGER = os.getenv("CELERY_TASK_ALWAYS_EAGER", "True") == "True"
+CELERY_TASK_EAGER_PROPAGATES = (
+    os.getenv("CELERY_TASK_EAGER_PROPAGATES", "True") == "True"
+)
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

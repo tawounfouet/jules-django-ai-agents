@@ -1,7 +1,7 @@
 """
-Agent Factory using LangChain's official create_agent.
+Agent Factory using LangGraph's official create_react_agent.
 
-This version uses the official LangChain agent functions instead of manual implementation.
+This version uses the official LangGraph prebuilt functions instead of manual implementation.
 Benefits:
 - Less code to maintain
 - Official support and updates
@@ -9,7 +9,7 @@ Benefits:
 - Better error handling
 """
 
-from langchain.agents import create_agent
+from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
 from .utils import get_llm, load_tools_for_agent
@@ -17,7 +17,7 @@ from .utils import get_llm, load_tools_for_agent
 
 def create_data_agent(checkpointer=None):
     """
-    Creates a data retrieval agent using create_agent.
+    Creates a data retrieval agent using create_react_agent.
 
     Returns:
         CompiledStateGraph: A compiled agent ready to use
@@ -28,10 +28,10 @@ def create_data_agent(checkpointer=None):
     if checkpointer is None:
         checkpointer = MemorySaver()
 
-    agent = create_agent(
+    agent = create_react_agent(
         model=llm,
         tools=tools,
-        system_prompt="You are a data retrieval agent. Help users check order status and ticket information.",
+        prompt="You are a data retrieval agent. Help users check order status and ticket information.",
         checkpointer=checkpointer,
         name="data_agent",
     )
@@ -41,7 +41,7 @@ def create_data_agent(checkpointer=None):
 
 def create_support_agent(checkpointer=None):
     """
-    Creates a customer support agent using create_agent.
+    Creates a customer support agent using create_react_agent.
 
     Returns:
         CompiledStateGraph: A compiled agent ready to use
@@ -51,10 +51,10 @@ def create_support_agent(checkpointer=None):
     if checkpointer is None:
         checkpointer = MemorySaver()
 
-    agent = create_agent(
+    agent = create_react_agent(
         model=llm,
         tools=[],  # Support agent doesn't need tools
-        system_prompt="You are a helpful customer support agent. Answer questions clearly and professionally.",
+        prompt="You are a helpful customer support agent. Answer questions clearly and professionally.",
         checkpointer=checkpointer,
         name="support_agent",
     )
@@ -64,7 +64,7 @@ def create_support_agent(checkpointer=None):
 
 def create_document_agent(checkpointer=None):
     """
-    Creates a document management agent using create_agent.
+    Creates a document management agent using create_react_agent.
 
     Returns:
         CompiledStateGraph: A compiled agent ready to use
@@ -75,36 +75,12 @@ def create_document_agent(checkpointer=None):
     if checkpointer is None:
         checkpointer = MemorySaver()
 
-    agent = create_agent(
+    agent = create_react_agent(
         model=llm,
         tools=tools,
-        system_prompt="You are a document management agent. Help users create, search, update, and delete their documents.",
+        prompt="You are a document management agent. Help users create, search, update, and delete their documents.",
         checkpointer=checkpointer,
         name="document_agent",
-    )
-
-    return agent
-
-
-def create_movie_agent(checkpointer=None):
-    """
-    Creates a movie discovery agent using create_agent.
-
-    Returns:
-        CompiledStateGraph: A compiled agent ready to use
-    """
-    llm = get_llm("movie_agent")
-    tools = load_tools_for_agent("movie_agent")
-
-    if checkpointer is None:
-        checkpointer = MemorySaver()
-
-    agent = create_agent(
-        model=llm,
-        tools=tools,
-        system_prompt="You are a movie discovery agent. Help users search for movies and get detailed information from The Movie Database (TMDB).",
-        checkpointer=checkpointer,
-        name="movie_agent",
     )
 
     return agent
@@ -122,5 +98,4 @@ def get_all_agents(checkpointer=None):
         create_data_agent(checkpointer),
         create_support_agent(checkpointer),
         create_document_agent(checkpointer),
-        create_movie_agent(checkpointer),
     ]

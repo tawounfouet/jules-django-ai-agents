@@ -2,6 +2,7 @@ from django.db import models
 from core.models import TimeStampedModel
 from .agent import Agent
 
+
 class Tool(TimeStampedModel):
     key = models.SlugField(unique=True)
     name = models.CharField(max_length=100)
@@ -9,7 +10,7 @@ class Tool(TimeStampedModel):
 
     python_path = models.CharField(
         max_length=255,
-        help_text="ex: ai.tools.check_order_status",
+        help_text="ex: ai.tools.order_tools.check_order_status",
     )
 
     is_sensitive = models.BooleanField(default=False)

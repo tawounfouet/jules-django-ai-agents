@@ -3,6 +3,7 @@ celery
 redis
 langchain
 langgraph
+langgraph-supervisor
 langchain-community
 langchain-core
 langchain-text-splitters
@@ -13,3 +14,5 @@ pytest
 pytest-django
 pytest-mock
 freezegun
+
+python-dotenv
